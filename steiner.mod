@@ -26,7 +26,7 @@ minimize CUSTO: sum{v in Tv, u in Tv}c[v, u]*x[v, u];
 # Restrições
 
 # Nodos obrigatórios tem grau pelo menos 1
-s.t. TERMINAIS{r in R}: sum{v in Tv}x[r, v] + sum{v in Tv}x[v, r] >= 1;
+s.t. TERMINAIS{r in R}: sum{(i, j) in E: j == r}x[i, r] >= 1;
 
 s.t. ARESTAS{k in 2..}: sum{(i, j) in E}x[i, j] = card(Tv) - 1;
 
