@@ -62,6 +62,9 @@ minimize CUSTO: sum{(i, j) in E}c[i, j]*x[i, j];
 
 # Restricoes
 
+# Como relacionar a variavel de arestas com a de nodos?
+s.t. CONSISTENCIA{(i, j) in E}: x[i, j] = (y[i] + y[j])/2;
+
 # Nodos obrigatorios tem grau pelo menos 1
 s.t. TERMINAIS{r in R}: sum{(i, j) in E: j == r}x[i, r] >= 1;
 
@@ -98,7 +101,7 @@ s.t. ARESTAS: sum{(i, j) in E}x[i, j] = sum{k in V}y[k] - 1;
 #param K := sum{v in V}y[v];
 #var L{k in K} := setof{v in V : k == sum{u in V : u <= v} 1} v;
 
-s.t. CONEXO{(i, j) in N : i >= p}: if sum{v in N[i, j]}y[v] == i then sum{u in N[i, j], t in N[i, j]}x[u, t] < i;
+s.t. CONEXO{i in I, j in J[i]}: if (i >= p) && (sum{v in N[i, j]}y[v] = i) then sum{u in N[i, j], t in N[i, j]}x[u, t] < i;
 
 solve;
 
