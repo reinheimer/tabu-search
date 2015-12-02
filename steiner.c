@@ -3,27 +3,11 @@
 *
 * Autores: Jéssica de Lima [jessica.lima@acad.pucrs.br]
 *          Karen Fischborn [karen.fischborn@gmail.com]
+* Arquivo: steiner.c
 */
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-FILE *fp;
-
-int **adjacency;
-int nodeCount;
-int *requiredNodes;
-
-void printUsage(const char exec[]);
-int openFile(const char path[]);
-void parse();
-void section();
-void comments();
-void graph();
-void terminals();
-void nodes();
-void edges();
+#include "steiner.h"
+#include "kruskal.h"
 
 int main (int argc, const char* argv[]) {
 
@@ -39,7 +23,15 @@ int main (int argc, const char* argv[]) {
 
   parse();
 
+  if (argc < 3) tenure = nodeCount * 0.1; // how to decide about this guy?
+  else tenure = atoi(argv[2]);
+
   fclose(fp);
+
+  // find initial state
+  initialState();
+
+  localSearch();
 
   free(adjacency);
   free(requiredNodes);
@@ -52,7 +44,7 @@ int main (int argc, const char* argv[]) {
 
 void printUsage(const char exec[]) {
   // Imprimir ajuda para a execução do programa
-  printf("\nUsage:\n\t%s <input_file>\n", exec);
+  printf("\nUsage:\n\t%s <input_file> <tenure>\n", exec);
 }
 
 int openFile(const char path[]) {
@@ -187,7 +179,7 @@ void nodes() {
 
   for (i = 0; i < nodeCount; i++) {
     //adjacency[i] = (int *)calloc(i, sizeof(int));
-    adjacency[i] = (int *)calloc(nodeCount, sizeof(int));
+    adjacency[i] = (int *)calloc(i, sizeof(int));
   }
 
 }
@@ -195,7 +187,7 @@ void nodes() {
 void edges() {
 
   char token[6];
-  int edgeCount, i, from, to, weight;
+  int i, from, to, weight, aux;
 
   fscanf(fp, "%s", token);
 
@@ -215,12 +207,55 @@ void edges() {
 
     fscanf(fp, "%d %d %d", &from, &to, &weight);
 
+    if (from < to) {
+      aux = from;
+      from = to;
+      to = aux;
+    }
+
     adjacency[from - 1][to - 1] = weight;
-    adjacency[to - 1][from - 1] = weight;
 
     //printf("adjacency[%d][%d] = %d\n", from, to, adjacency[from - 1][to - 1]);
     //printf("adjacency[%d][%d] = %d\n", to, from, adjacency[to - 1][from - 1]);
 
   }
+
+}
+
+void initialState() {
+  int i = 0;
+
+  optimalSolution = (int *) calloc(0, sizeof(int));
+  // optimalCost = ??? Bad news are it does't even form a tree with required nodes only
+
+  int v, e;
+  v = nodeCount;
+  e = edgeCount;
+  struct Graph* graph = createGraph(v, e);
+
+  while (i < v * v) {
+    int l, c;
+
+    l = i / nodeCount;
+    c = i % nodeCount;
+
+    if (l > c) {
+      int w = adjacency[l][c];
+      if (w != 0) {
+        graph->edge[i].src = l;
+        graph->edge[i].dest = c;
+        graph->edge[i].weight = w;
+      }
+    }
+    i++;
+  }
+
+  optimalCost = KruskalMST(graph);
+  printf("Initial cost: %.2f\n", optimalCost);
+
+  tabuMoves = (int *) calloc(tenure, sizeof(int));
+}
+
+void localSearch() {
 
 }
