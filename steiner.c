@@ -31,10 +31,12 @@ int main (int argc, const char* argv[]) {
   // find initial state
   initialState();
 
-  localSearch();
+  while (criterio de parada) {
+    localSearch();
+  }
 
   free(adjacency);
-  free(requiredNodes);
+  free(terminalNodes);
 
   // printf("~waddle away~\n");
 
@@ -140,7 +142,7 @@ void terminals() {
 
   fscanf(fp, "%d", &terminalCount);
 
-  requiredNodes = (int *) calloc(terminalCount, sizeof(int));
+  terminalNodes = (int *) calloc(terminalCount, sizeof(int));
 
   for (i = 0; i < terminalCount; i++) {
     fscanf(fp, "%s", token);
@@ -149,7 +151,7 @@ void terminals() {
       exit(EXIT_FAILURE);
 
     fscanf(fp, "%d", &r);
-    requiredNodes[i] = r;
+    terminalNodes[i] = r;
   }
 
   fscanf(fp, "%s", token);
@@ -179,7 +181,7 @@ void nodes() {
 
   for (i = 0; i < nodeCount; i++) {
     //adjacency[i] = (int *)calloc(i, sizeof(int));
-    adjacency[i] = (int *)calloc(i, sizeof(int));
+    adjacency[i] = (int *) calloc(i, sizeof(int));
   }
 
 }
@@ -225,8 +227,12 @@ void edges() {
 void initialState() {
   int i = 0;
 
-  optimalSolution = (int *) calloc(0, sizeof(int));
+  currentSolution = (int *) calloc(nodeCount - terminalCount, sizeof(int));
+  //for (i = 0; i < )
+
+  //optimalSolution = currentSolution
   // optimalCost = ??? Bad news are it does't even form a tree with required nodes only
+
 
   int v, e;
   v = nodeCount;
@@ -254,12 +260,138 @@ void initialState() {
   printf("Initial cost: %.2f\n", optimalCost);
 
   tabuMoves = (int *) calloc(tenure, sizeof(int));
+  tabuTail = 0;
 }
 
 void localSearch() {
+  float currentCost = bestMove();
+  if (currentCost < optimalCost) {
+    optimalCost = currentCost;
+    optimalSolution = currentSolution;
+  }
+}
+
+float bestMove() {
+  int i, t, k = 0;
+  int offsetL = 0, offsetC;
+
+  int move = 0;
+  float theBest = 0;
+
+  // iterate over Steiner nodes
+  for (i = 1; i <= nodeCount - terminalCount; i++) {
+
+    int v, e, op;
+
+    // ignoring terminals
+    if (inTerminals(i)) break;
+
+    // ignoring tabu moves
+    if (searchTabu(i)) break;
+
+    op = inCurrentSolution(i);
+    v = terminalCount + solutionSize + op;
+    e = 0;
+
+    struct Edge *edges = (struct Edge*) malloc( edgeCount * sizeof( struct Edge ) );
+
+    while (k < v * v) {
+      int l, c;
+
+      l = k / nodeCount;
+      c = k % nodeCount;
+
+      if (c == 0) offsetC = 0;
+
+      if (l > c) {
+
+        // edge must be evaluate when generating the MST
+        if (inTerminals(l) || inCurrentSolution(l) + 1) {
+          if (inTerminals(c) || inCurrentSolution(c) + 1) {
+            int w = adjacency[l][c];
+            if (w != 0) {
+              edges[e].src = l - offsetL + 1;
+              edges[e].dest = c - offsetC + 1;
+              edges[e].weight = w;
+              e++;
+            }
+          } else offsetC++;
+        } else offsetL++;
+      }
+      k++;
+    }
+
+    struct Graph *graph = createGraph(v, e);
+    graph->edge = edges;
+
+    float result = KruskalMST(graph);
+
+    if (result < theBest) {
+      theBest = result;
+      move = i;
+    }
+  }
+
+  if (inCurrentSolution(move) == 1) {
+    // Have to colocar
+    currentSolution[solutionSize] = move;
+    solutionSize++;
+  } else {
+
+    int c, flag = 0;
+    for (c = 0; c < solutionSize; c++) {
+      if (currentSolution[c] == move) {
+        flag = 1;
+      }
+      if (flag == 1)
+        currentSolution[c - 1] = currentSolution[c];
+    }
+
+    solutionSize--;
+  }
+
+  updateTabu(move);
+
+  return theBest;
 
 }
 
-int bestMove() {
-  
+void updateTabu(int move) {
+
+  tabuMoves[tabuTail] = move;
+  tabuTail += (tabuTail + 1) % tenure;
+
+}
+
+int searchTabu(int s) {
+  int t;
+
+  for (t = 0; t < tenure; t++) {
+    if (s == tabuMoves[t]) return 1;
+  }
+
+  return 0;
+
+}
+
+int inTerminals(int s) {
+  int t;
+
+  for (t = 0; t < terminalCount; t++) {
+    if (s == terminalNodes[t]) return 1;
+  }
+
+  return 0;
+
+}
+
+int inCurrentSolution(int n) {
+  int i;
+
+  for (i = 0; i < solutionSize; i++) {
+    if (currentSolution[i] == n)
+      return -1;
+  }
+  return 1;
+
 }

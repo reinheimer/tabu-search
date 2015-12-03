@@ -20,13 +20,15 @@ int **adjacency;
 int nodeCount;
 int edgeCount;
 int terminalCount;
-int *requiredNodes;
+int *terminalNodes;
 int tenure;
 int *tabuMoves;
+int tabuTail;
 
 int *optimalSolution;
 float optimalCost;
 int *currentSolution;
+int solutionSize;
 
 void printUsage(const char exec[]);
 int openFile(const char path[]);
@@ -40,5 +42,7 @@ void edges();
 
 void initialState();
 void localSearch();
+float bestMove();
+void updateTabu();
 
 #endif

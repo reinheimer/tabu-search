@@ -160,12 +160,6 @@ set E : 1 2 3 4 5 6 7 :=
       7 - - - - - - -
 ;
 
-#set Tv# := 1
-        # 2
-       #  3
-        # 4
-#; # Nodos selecionados
-
 # Parametros
 param c default 100:
           1  2  3  4  5  6  7 :=
