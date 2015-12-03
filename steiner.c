@@ -259,3 +259,7 @@ void initialState() {
 void localSearch() {
 
 }
+
+int bestMove() {
+  
+}
