@@ -26,6 +26,7 @@ int *tabuMoves;
 int tabuTail;
 
 int *optimalSolution;
+int optimalSize;
 float optimalCost;
 int *currentSolution;
 int solutionSize;
@@ -44,5 +45,10 @@ void initialState();
 void localSearch();
 float bestMove();
 void updateTabu();
+int searchTabu(int s);
+int inTerminals(int s);
+int inCurrentSolution(int n);
+
+void printCurrent();
 
 #endif

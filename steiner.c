@@ -11,11 +11,16 @@
 
 int main (int argc, const char* argv[]) {
 
+  // How to accept tags like -i, -t, etc in command line?
+
+  int it;
+
   if (argc < 2) {
     printUsage(argv[0]);
     exit(EXIT_FAILURE);
   }
 
+  // We have to read from stdin too
   if (openFile(argv[1]) < 0) {
     printf("Error opening file: %s\n", argv[1]);
     exit(EXIT_FAILURE);
@@ -26,12 +31,15 @@ int main (int argc, const char* argv[]) {
   if (argc < 3) tenure = nodeCount * 0.1; // how to decide about this guy?
   else tenure = atoi(argv[2]);
 
+  if (argc < 4) it = 1000;
+  else it = atoi(argv[3]);
+
   fclose(fp);
 
-  // find initial state
   initialState();
 
-  while (criterio de parada) {
+  while (it--) {
+    printf("\nIteration #%d\n", 1000 - it);
     localSearch();
   }
 
@@ -131,7 +139,7 @@ void graph() {
 void terminals() {
 
   char token[10];
-  int i, terminalCount, r;
+  int i, r;
 
   printf("\nDefining terminal nodes\n");
 
@@ -156,8 +164,13 @@ void terminals() {
 
   fscanf(fp, "%s", token);
 
-  if (strcmp(token, "END") == 0)
-    printf("Second level engines working\n");
+  if (strcmp(token, "END") == 0) {
+    printf("Terminal nodes read\n[");
+    for (i = 0; i < terminalCount - 1; i++) {
+      printf("%d ", terminalNodes[i]);
+    }
+    printf("%d]\n\n", terminalNodes[terminalCount - 1]);
+  }
   else exit(EXIT_FAILURE);
 
 }
@@ -225,14 +238,27 @@ void edges() {
 }
 
 void initialState() {
-  int i = 0;
 
-  currentSolution = (int *) calloc(nodeCount - terminalCount, sizeof(int));
-  //for (i = 0; i < )
+  int i, steinerCount;
+  solutionSize = 0;
 
-  //optimalSolution = currentSolution
+  steinerCount = nodeCount - terminalCount;
+
+  currentSolution = (int *) calloc(steinerCount, sizeof(int));
+  optimalSolution = (int *) calloc(steinerCount, sizeof(int));
+
+  for (i = 1; i <= nodeCount; i++) {
+    if (inTerminals(i) == 0)
+      currentSolution[solutionSize++] = i;
+  }
+
+  printf("Initial solution is\n");
+  printCurrent();
+
+  optimalSize = solutionSize;
+
+  memcpy(optimalSolution, currentSolution, sizeof(int) * solutionSize);
   // optimalCost = ??? Bad news are it does't even form a tree with required nodes only
-
 
   int v, e;
   v = nodeCount;
@@ -261,13 +287,17 @@ void initialState() {
 
   tabuMoves = (int *) calloc(tenure, sizeof(int));
   tabuTail = 0;
+
 }
 
 void localSearch() {
+
   float currentCost = bestMove();
+
   if (currentCost < optimalCost) {
     optimalCost = currentCost;
-    optimalSolution = currentSolution;
+    memcpy(optimalSolution, currentSolution, sizeof(int) * solutionSize);
+    optimalSize = solutionSize;
   }
 }
 
@@ -290,10 +320,13 @@ float bestMove() {
     if (searchTabu(i)) break;
 
     op = inCurrentSolution(i);
+
+    printf("Operation %s of node %d\n", op > 0? "Insertion": "Removal", i);
     v = terminalCount + solutionSize + op;
+    printf("Number of nodes in neighbor %d\n", v);
     e = 0;
 
-    struct Edge *edges = (struct Edge*) malloc( edgeCount * sizeof( struct Edge ) );
+    struct Edge *edges = (struct Edge*) malloc(edgeCount * sizeof(struct Edge));
 
     while (k < v * v) {
       int l, c;
@@ -320,6 +353,8 @@ float bestMove() {
       }
       k++;
     }
+
+    printf("Number of edges in neighbor %d\n", e);
 
     struct Graph *graph = createGraph(v, e);
     graph->edge = edges;
@@ -394,4 +429,13 @@ int inCurrentSolution(int n) {
   }
   return 1;
 
+}
+
+void printCurrent() {
+  int i;
+  printf("[");
+  for (i = 0; i < solutionSize - 1; i++) {
+    printf("%d ", currentSolution[i]);
+  }
+  printf("%d]\n", currentSolution[solutionSize - 1]);
 }
