@@ -46,6 +46,8 @@ int main (int argc, const char* argv[]) {
   free(adjacency);
   free(terminalNodes);
   free(optimalSolution);
+  free(currentSolution);
+  free(tabuMoves);
 
   // printf("~waddle away~\n");
 
@@ -194,7 +196,6 @@ void nodes() {
   if (adjacency == NULL) exit (EXIT_FAILURE);
 
   for (i = 0; i < nodeCount; i++) {
-    //adjacency[i] = (int *)calloc(i, sizeof(int));
     adjacency[i] = (int *) calloc(i, sizeof(int));
   }
 
@@ -231,9 +232,6 @@ void edges() {
 
     adjacency[from - 1][to - 1] = weight;
 
-    //printf("adjacency[%d][%d] = %d\n", from, to, adjacency[from - 1][to - 1]);
-    //printf("adjacency[%d][%d] = %d\n", to, from, adjacency[to - 1][from - 1]);
-
   }
 
 }
@@ -266,25 +264,26 @@ void initialState() {
   e = edgeCount;
   struct Graph* graph = createGraph(v, e);
 
-  while (i < v * v) {
-    int l, c;
+  int l, c;
+  i = 0;
+  for (l = 0; l < v; l++) {
+    for (c = 0; c < l; c++) {
 
-    l = i / nodeCount;
-    c = i % nodeCount;
-
-    if (l > c) {
       int w = adjacency[l][c];
+
+      // printf("[%d, %d] = %d\n", l, c, w);
+
       if (w != 0) {
-        graph->edge[i].src = l;
-        graph->edge[i].dest = c;
+        graph->edge[i].src = l + 1;
+        graph->edge[i].dest = c + 1;
         graph->edge[i].weight = w;
+        i++;
       }
     }
-    i++;
   }
 
   optimalCost = KruskalMST(graph);
-  printf("Initial cost: %.2f\n", optimalCost);
+  printf("Initial cost: %d\n", optimalCost);
 
   tabuMoves = (int *) calloc(tenure, sizeof(int));
   tabuTail = 0;
@@ -293,7 +292,7 @@ void initialState() {
 
 void localSearch() {
 
-  float currentCost = bestMove();
+  int currentCost = bestMove();
 
   if (currentCost < optimalCost) {
     optimalCost = currentCost;
@@ -303,22 +302,28 @@ void localSearch() {
 
 }
 
-float bestMove() {
-  int i, t, k = 0, l, c;
+int bestMove() {
+  int i, l, c;
 
   int move = 0;
-  float theBest = 0;
+  int theBest = 0;
 
   // iterate over Steiner nodes to find best neighbor
-  for (i = 1; i <= nodeCount - terminalCount; i++) {
+  for (i = 1; i <= nodeCount; i++) {
 
     int v, e, op;
 
     // ignoring terminals
-    if (inTerminals(i)) break;
+    if (inTerminals(i)) {
+      printf("%d is terminal\n", i);
+      continue;
+    }
 
     // ignoring tabu moves
-    if (searchTabu(i)) break;
+    if (searchTabu(i)) {
+      printf("%d is tabu\n", i);
+      continue;
+    }
 
     op = inCurrentSolution(i);
 
@@ -344,6 +349,8 @@ float bestMove() {
               edges[e].src = l - offsetL + 1;
               edges[e].dest = c - offsetC + 1;
               edges[e].weight = w;
+
+              printf("[%d] (%d - %d + 1) = %d (%d - %d + 1) = %d %d\n", e, l, offsetL, edges[e].src, c, offsetC, edges[e].dest, edges[e].weight);
               e++;
             }
           } else offsetC++;
@@ -354,9 +361,15 @@ float bestMove() {
     printf("Number of edges in neighbor %d\n", e);
 
     struct Graph *graph = createGraph(v, e);
-    graph->edge = edges;
+    memcpy(graph->edge, edges, e * sizeof(struct Edge));
+    //graph->edge = edges;
 
-    float result = KruskalMST(graph);
+    int result = KruskalMST(graph);
+
+    free(edges);
+    free(graph);
+
+    printf("New cost: %d\n", result);
 
     if (result < theBest) {
       theBest = result;
@@ -365,9 +378,8 @@ float bestMove() {
   }
 
   if (inCurrentSolution(move) == 1) {
-    // Have to colocar
-    currentSolution[solutionSize] = move;
-    solutionSize++;
+    // The Steiner node must be included
+    currentSolution[solutionSize++] = move;
   } else {
 
     int c, flag = 0;

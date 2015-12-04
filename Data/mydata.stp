@@ -1,0 +1,33 @@
+33D32945 STP File, STP Format Version 1.0
+
+SECTION Comment
+Name    "JK01"
+Creator "J. R. Lima"
+Remark  "Cute graph with two useful Steiner nodes."
+END
+
+SECTION Graph
+Nodes 7
+Edges 11
+E 1 2 10
+E 2 3 12
+E 1 4 12
+E 3 4 10
+E 1 5 3
+E 2 5 3
+E 5 6 1
+E 4 6 3
+E 3 6 3
+E 4 7 3
+E 3 7 3
+END
+
+SECTION Terminals
+Terminals 4
+T 1
+T 2
+T 3
+T 4
+END
+
+EOF
