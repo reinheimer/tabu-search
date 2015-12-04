@@ -45,6 +45,7 @@ int main (int argc, const char* argv[]) {
 
   free(adjacency);
   free(terminalNodes);
+  free(optimalSolution);
 
   // printf("~waddle away~\n");
 
@@ -299,16 +300,16 @@ void localSearch() {
     memcpy(optimalSolution, currentSolution, sizeof(int) * solutionSize);
     optimalSize = solutionSize;
   }
+
 }
 
 float bestMove() {
-  int i, t, k = 0;
-  int offsetL = 0, offsetC;
+  int i, t, k = 0, l, c;
 
   int move = 0;
   float theBest = 0;
 
-  // iterate over Steiner nodes
+  // iterate over Steiner nodes to find best neighbor
   for (i = 1; i <= nodeCount - terminalCount; i++) {
 
     int v, e, op;
@@ -328,19 +329,16 @@ float bestMove() {
 
     struct Edge *edges = (struct Edge*) malloc(edgeCount * sizeof(struct Edge));
 
-    while (k < v * v) {
-      int l, c;
+    int offsetL = 0, offsetC;
 
-      l = k / nodeCount;
-      c = k % nodeCount;
+    for (l = 0; l < nodeCount; l++) {
 
-      if (c == 0) offsetC = 0;
+      offsetC = 0;
 
-      if (l > c) {
-
-        // edge must be evaluate when generating the MST
-        if (inTerminals(l) || inCurrentSolution(l) + 1) {
-          if (inTerminals(c) || inCurrentSolution(c) + 1) {
+      for (c = 0; c < l; c++){
+                              // return -1 on pertinence, 1 c.c.
+        if (inTerminals(l) || inCurrentSolution(l) - 1) {
+          if (inTerminals(c) || inCurrentSolution(c) - 1) {
             int w = adjacency[l][c];
             if (w != 0) {
               edges[e].src = l - offsetL + 1;
@@ -351,7 +349,6 @@ float bestMove() {
           } else offsetC++;
         } else offsetL++;
       }
-      k++;
     }
 
     printf("Number of edges in neighbor %d\n", e);
