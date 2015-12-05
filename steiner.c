@@ -9,11 +9,15 @@
 #include "steiner.h"
 #include "kruskal.h"
 
+// #define DEBUG_1
+// #define DEBUG_2
+
 int main (int argc, const char* argv[]) {
 
   // How to accept tags like -i, -t, etc in command line?
 
-  int it;
+  int it, cIt = 0;
+  int convergence = 80;
 
   if (argc < 2) {
     printUsage(argv[0]);
@@ -28,7 +32,11 @@ int main (int argc, const char* argv[]) {
 
   parse();
 
-  if (argc < 3) tenure = nodeCount * 0.1; // how to decide about this guy?
+  if (argc < 3) {
+    // how to decide about this guy?
+    tenure = nodeCount * 0.1;
+    if (tenure < 5) tenure = nodeCount - terminalCount - 1;
+  }
   else tenure = atoi(argv[2]);
 
   if (argc < 4) it = 1000;
@@ -38,10 +46,30 @@ int main (int argc, const char* argv[]) {
 
   initialState();
 
-  while (it--) {
-    printf("\nIteration #%d\n", 1000 - it);
-    localSearch();
+  while (it-- && convergence - cIt) {
+
+    #ifdef DEBUG_1
+    printf("\n\nIteration #%d\n", 1000 - it);
+    #endif
+
+    if (localSearch())
+      cIt = 0;
+    else cIt++;
+    #ifdef DEBUG_1
+    printf("\n");
+    #endif
+
   }
+
+  printf("\nThis is the end!\n");
+  printf("----------------\n");
+  printf("Met criterion: %s\n", cIt == convergence? "iterations without improvement": "max iterations");
+  printf("The optimal solution is ");
+  printOptimal();
+  printf("Steiner nodes: %d\tCost: %d\n", optimalSize, optimalCost);
+  printf("Deviation from initial solution: %.3f%%\n\n", 100 * (initialCost - optimalCost)/(float)initialCost);
+  //printf("\tOptimal solution -> %.3f\n\n", 100 * (82.0 - optimalCost)/82.0);
+
 
   free(adjacency);
   free(terminalNodes);
@@ -277,6 +305,7 @@ void initialState() {
         graph->edge[i].src = l + 1;
         graph->edge[i].dest = c + 1;
         graph->edge[i].weight = w;
+        //printf("[%d] (%d + 1) = %d (%d + 1) = %d %d\n", i, l, graph->edge[i].src, c, graph->edge[i].dest, graph->edge[i].weight);
         i++;
       }
     }
@@ -284,13 +313,18 @@ void initialState() {
 
   optimalCost = KruskalMST(graph);
   printf("Initial cost: %d\n", optimalCost);
+  initialCost = optimalCost;
 
   tabuMoves = (int *) calloc(tenure, sizeof(int));
   tabuTail = 0;
 
+  free(graph);
+
 }
 
-void localSearch() {
+int localSearch() {
+
+  int ret = 0;
 
   int currentCost = bestMove();
 
@@ -298,112 +332,121 @@ void localSearch() {
     optimalCost = currentCost;
     memcpy(optimalSolution, currentSolution, sizeof(int) * solutionSize);
     optimalSize = solutionSize;
+    ret = 1;
   }
+
+  #ifdef DEBUG_1
+  printf("Optimal solution is\n");
+  printOptimal();
+  #endif
+
+  return ret;
 
 }
 
 int bestMove() {
-  int i, l, c;
+  int i, op;
 
   int move = 0;
-  int theBest = 0;
+  int theBest = INT_MAX;
 
   // iterate over Steiner nodes to find best neighbor
   for (i = 1; i <= nodeCount; i++) {
 
-    int v, e, op;
-
     // ignoring terminals
     if (inTerminals(i)) {
+      #ifdef DEBUG_2
       printf("%d is terminal\n", i);
+      #endif
       continue;
     }
 
     // ignoring tabu moves
     if (searchTabu(i)) {
+      #ifdef DEBUG_1
       printf("%d is tabu\n", i);
+      #endif
       continue;
     }
 
     op = inCurrentSolution(i);
 
-    printf("Operation %s of node %d\n", op > 0? "Insertion": "Removal", i);
-    v = terminalCount + solutionSize + op;
-    printf("Number of nodes in neighbor %d\n", v);
-    e = 0;
+    int result = neighborCost(i, op);
 
-    struct Edge *edges = (struct Edge*) malloc(edgeCount * sizeof(struct Edge));
-
-    int offsetL = 0, offsetC;
-
-    for (l = 0; l < nodeCount; l++) {
-
-      offsetC = 0;
-
-      for (c = 0; c < l; c++){
-                              // return -1 on pertinence, 1 c.c.
-        if (inTerminals(l) || inCurrentSolution(l) - 1) {
-          if (inTerminals(c) || inCurrentSolution(c) - 1) {
-            int w = adjacency[l][c];
-            if (w != 0) {
-              edges[e].src = l - offsetL + 1;
-              edges[e].dest = c - offsetC + 1;
-              edges[e].weight = w;
-
-              printf("[%d] (%d - %d + 1) = %d (%d - %d + 1) = %d %d\n", e, l, offsetL, edges[e].src, c, offsetC, edges[e].dest, edges[e].weight);
-              e++;
-            }
-          } else offsetC++;
-        } else offsetL++;
-      }
-    }
-
-    printf("Number of edges in neighbor %d\n", e);
-
-    struct Graph *graph = createGraph(v, e);
-    memcpy(graph->edge, edges, e * sizeof(struct Edge));
-    //graph->edge = edges;
-
-    int result = KruskalMST(graph);
-
-    free(edges);
-    free(graph);
-
+    #ifdef DEBUG_1
     printf("New cost: %d\n", result);
+    #endif
 
     if (result < theBest) {
       theBest = result;
       move = i;
+      #ifdef DEBUG_1
+      printf("Optimal solution updated.\n");
+      #endif
     }
   }
 
-  if (inCurrentSolution(move) == 1) {
+  updateTabu(move);
+
+  if (move == 0)
+    return bestMove();
+
+  #ifdef DEBUG_1
+  printf("Best neighbor found is %d, costing %d\n", move, theBest);
+  #endif
+
+  if (inCurrentSolution(move) == -1) {
     // The Steiner node must be included
     currentSolution[solutionSize++] = move;
+
   } else {
 
     int c, flag = 0;
+
     for (c = 0; c < solutionSize; c++) {
       if (currentSolution[c] == move) {
         flag = 1;
       }
-      if (flag == 1)
-        currentSolution[c - 1] = currentSolution[c];
+      if (flag == 1) {
+        if (c != solutionSize - 1)
+          currentSolution[c] = currentSolution[c + 1];
+      }
     }
-
     solutionSize--;
   }
 
-  updateTabu(move);
+  #ifdef DEBUG_1
+  printf("New solution with %d Steiner nodes is ", solutionSize);
+  printCurrent();
+  #endif
 
   return theBest;
 
 }
 
 void updateTabu(int move) {
+  int t;
+
+  #ifdef DEBUG_2
+  printf("Tabutail = %d\n", tabuTail);
+
+  for (t = 0; t < tenure; t++) {
+    printf("%d ", tabuMoves[t]);
+  }
+  #endif
 
   tabuMoves[tabuTail] = move;
-  tabuTail += (tabuTail + 1) % tenure;
+
+  tabuTail = (tabuTail + 1) % tenure;
+
+  #ifdef DEBUG_1
+  printf("\nNew tabutail = %d\n", tabuTail);
+
+  for (t = 0; t < tenure; t++) {
+    printf("%d ", tabuMoves[t]);
+  }
+  printf("\n\n");
+  #endif
 
 }
 
@@ -434,17 +477,105 @@ int inCurrentSolution(int n) {
 
   for (i = 0; i < solutionSize; i++) {
     if (currentSolution[i] == n)
-      return -1;
+      return 1;
   }
-  return 1;
+  return -1;
 
 }
 
 void printCurrent() {
   int i;
-  printf("[");
-  for (i = 0; i < solutionSize - 1; i++) {
-    printf("%d ", currentSolution[i]);
+  if (solutionSize == 0)
+    printf("[ ]\n");
+  else {
+
+    printf("[");
+
+    for (i = 0; i < solutionSize - 1; i++) {
+      printf("%d ", currentSolution[i]);
+    }
+    printf("%d]\n", currentSolution[solutionSize - 1]);
   }
-  printf("%d]\n", currentSolution[solutionSize - 1]);
+}
+
+void printOptimal() {
+  int i;
+  if (optimalSize == 0)
+    printf("[ ]\n");
+  else {
+
+    printf("[");
+
+    for (i = 0; i < optimalSize - 1; i++) {
+      printf("%d ", optimalSolution[i]);
+    }
+    printf("%d]\n", optimalSolution[optimalSize - 1]);
+  }
+}
+
+int neighborCost(int node, int op) {
+  // printf("Node %d\n", node);
+
+  int v = terminalCount + solutionSize - op;
+  int e = 0;
+  int offsetL = 0, offsetC, l, c;
+
+  #ifdef DEBUG_1
+  printf("\nAnalyzing %s of node %d\n", op > 0? "removal": "insertion", node);
+  printf("Number of NODES in neighbor %d\n", v);
+  #endif
+
+  struct Edge *edges = (struct Edge*) malloc(edgeCount * sizeof(struct Edge));
+
+  for (l = 0; l < nodeCount; l++) {
+
+    offsetC = 0;
+    // if (l + 1) is a required node, always enters
+    // if (l + 1) is currently in the solution, it should enter
+    //                BUT
+    // if it's the node we're considering to remove --> does not enter
+    // if (l + 1) is not in the solution, it should not enter
+    //                BUT
+    // if it is the node we're considering to insert --> it should enter
+
+                            // return 1 on pertinence, -1 c.c.
+    if (inTerminals(l + 1) || (inCurrentSolution(l + 1) + 1 && (l + 1 != node)) || (inCurrentSolution(l + 1) - 1 && (l + 1 == node))) {
+
+      for (c = 0; c < l; c++) {
+
+        if (inTerminals(c + 1) || (inCurrentSolution(c + 1) + 1 && (c + 1 != node)) || (inCurrentSolution(c + 1) - 1 && (c + 1 == node))) {
+          int w = adjacency[l][c];
+          if (w != 0) {
+
+            edges[e].src = l - offsetL + 1;
+            edges[e].dest = c - offsetC + 1;
+            edges[e].weight = w;
+
+            #ifdef DEBUG_2
+            printf("[%d, %d] = %d (%d, %d) --> ", l + 1, c + 1, w, offsetL, offsetC);
+            printf("[%d, %d] = %d\n", edges[e].src, edges[e].dest, edges[e].weight);
+            // printf("[%d] (%d - %d + 1) = %d (%d - %d + 1) = %d %d\n", e, l, offsetL, edges[e].src, c, offsetC, edges[e].dest, edges[e].weight);
+            #endif
+
+            e++;
+
+          }
+        } else offsetC++;
+      }
+    } else offsetL++;
+  }
+
+  #ifdef DEBUG_1
+  printf("Number of EDGES in neighbor %d\n", e);
+  #endif
+
+  struct Graph *graph = createGraph(v, e);
+  memcpy(graph->edge, edges, e * sizeof(struct Edge));
+
+  int result = KruskalMST(graph);
+
+  free(graph);
+  free(edges);
+
+  return result;
 }

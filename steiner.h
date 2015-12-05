@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 FILE *fp;
 
@@ -30,6 +31,7 @@ int optimalSize;
 int optimalCost;
 int *currentSolution;
 int solutionSize;
+int initialCost;
 
 void printUsage(const char exec[]);
 int openFile(const char path[]);
@@ -42,7 +44,7 @@ void nodes();
 void edges();
 
 void initialState();
-void localSearch();
+int localSearch();
 int bestMove();
 void updateTabu();
 int searchTabu(int s);
@@ -50,5 +52,8 @@ int inTerminals(int s);
 int inCurrentSolution(int n);
 
 void printCurrent();
+void printOptimal();
+
+int neighborCost(int node, int op);
 
 #endif

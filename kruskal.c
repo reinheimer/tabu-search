@@ -4,8 +4,7 @@
 #include "kruskal.h"
 
 // Creates a graph with V vertices and E edges
-struct Graph* createGraph(int V, int E)
-{
+struct Graph* createGraph(int V, int E) {
     struct Graph* graph = (struct Graph*) malloc( sizeof(struct Graph) );
     graph->V = V;
     graph->E = E;
@@ -17,8 +16,9 @@ struct Graph* createGraph(int V, int E)
 
 // A utility function to find set of an element i
 // (uses path compression technique)
-int find(struct subset subsets[], int i)
-{
+int find(struct subset subsets[], int i) {
+  int k;
+
     // find root and make root as parent of i (path compression)
     if (subsets[i].parent != i)
         subsets[i].parent = find(subsets, subsets[i].parent);
@@ -28,8 +28,7 @@ int find(struct subset subsets[], int i)
 
 // A function that does union of two sets of x and y
 // (uses union by rank)
-void Union(struct subset subsets[], int x, int y)
-{
+void Union(struct subset subsets[], int x, int y) {
     int xroot = find(subsets, x);
     int yroot = find(subsets, y);
 
@@ -87,17 +86,18 @@ int KruskalMST(struct Graph* graph)
     // Number of edges to be taken is equal to V-1
     while (e < V - 1)
     {
+        // Are there still edges to feed Kruskal?
+        if (i >= graph->E) return INT_MAX;
+
         // Step 2: Pick the smallest edge. And increment the index
         // for next iteration
         struct Edge next_edge = graph->edge[i++];
-
         int x = find(subsets, next_edge.src);
         int y = find(subsets, next_edge.dest);
 
         // If including this edge does't cause cycle, include it
         // in result and increment the index of result for next edge
-        if (x != y)
-        {
+        if (x != y) {
             result[e++] = next_edge;
             Union(subsets, x, y);
         }
