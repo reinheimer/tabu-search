@@ -35,21 +35,18 @@ int main (int argc, const char* argv[]) {
   for (argIndex = 1; argIndex < argc; argIndex++) {
 
     if ((argType = strchr(argv[argIndex], '-') + 1) != NULL) {
+      #ifdef DEBUG_2
       printf("argType = %s\n", argType);
-
-      strcpy(argValue, argv[argIndex + 1]);
+      #endif
 
       switch ((int)argType[0]) {
 
         case 99: // -c sufficient iterations for "convergence"
-          convergence = atoi(argValue);
-          argIndex++;
+          convergence = atoi(argv[++argIndex]);
           break;
 
         case 102: // -f input file
-          strcpy(inputPath, argValue);
-          printf("input = %s\n", inputPath);
-          argIndex++;
+          strcpy(inputPath, argv[++argIndex]);
           break;
 
         case 103: // -g graphviz structure
@@ -62,8 +59,7 @@ int main (int argc, const char* argv[]) {
           break;
 
         case 109: // -m max iterations
-          maxIt = atoi(argValue);
-          argIndex++;
+          maxIt = atoi(argv[++argIndex]);
           break;
 
         case 115: // -s data for solver model
@@ -71,8 +67,7 @@ int main (int argc, const char* argv[]) {
           break;
 
         case 116: // -t tabu tenure
-          tenure = atoi(argValue);
-          argIndex++;
+          tenure = atoi(argv[++argIndex]);
           break;
       }
     }
@@ -89,54 +84,112 @@ int main (int argc, const char* argv[]) {
       exit(EXIT_FAILURE);
     }
 
-    if (extra > 1) { // GRAPHVIZ
-      char *last = strrchr(inputPath, '.');
-      if (last == NULL) {
-        char vizPath[strlen(inputPath) + 5];
-        strcpy(vizPath, inputPath);
-        strncat(vizPath, ".dot", 4);
-        outputs[2] = fopen(vizPath, "w");
-      } else {
-        strncpy(last, ".dot", 4);
-        outputs[2] = fopen(inputPath, "w");
-      }
-
-    } else if (extra > 0) { // GLPK SETS
-      char *last = strrchr(inputPath, '.');
-      if (last == NULL) {
-        char matPath[strlen(inputPath) + 5];
-        strcpy(matPath, inputPath);
-        strncat(matPath, ".dat", 4);
-        outputs[1] = fopen(matPath, "w");
-      } else {
-        strncpy(last, ".dat", 4);
-        outputs[1] = fopen(inputPath, "w");
-      }
-
-    } // NONE
-
   } else {
     fp = stdin; // We have to read from stdin too
+    strcpy(inputPath, "stdin");
   }
 
   parse(extra);
 
-  // Parameters
+  fclose(fp);
 
   if (tenure <= 0) {
     // how to decide about this guy?
     tenure = nodeCount * 0.1;
     if (tenure < 5) tenure = nodeCount - terminalCount - 1;
   }
-  // else tenure = atoi(argv[2]);
-
-  // if (maxIt <= 0) maxIt = 1000;
-
-  // if (argc > 4) convergence = atoi(argv[4]);
-
-  fclose(fp);
 
   initialState();
+
+  if (extra > 1) { // GRAPHVIZ
+    char *last = strrchr(inputPath, '.');
+    if (last == NULL) {
+      char vizPath[strlen(inputPath) + 5];
+      strcpy(vizPath, inputPath);
+      strncat(vizPath, ".dot", 4);
+      outputs[2] = fopen(vizPath, "w");
+    } else {
+      strncpy(last, ".dot", 4);
+      outputs[2] = fopen(inputPath, "w");
+    }
+    if (outputs[2] == NULL) {
+      printf("Sorry, file for Graphviz structure could not be created :(\n");
+      extra -= 2;
+    } else {
+      // write to file
+    }
+
+  } else if (extra > 0) { // GLPK SETS
+    char *last = strrchr(inputPath, '.');
+    if (last == NULL) {
+      char matPath[strlen(inputPath) + 5];
+      strcpy(matPath, inputPath);
+      strncat(matPath, ".dat", 4);
+      outputs[1] = fopen(matPath, "w");
+    } else {
+      strncpy(last, ".dat", 4);
+      outputs[1] = fopen(inputPath, "w");
+
+    }
+    if (outputs[1] == NULL) {
+      printf("Sorry, file for GLPK model could not be created :(\n");
+      extra -= 1;
+    } else {
+      int i, j, w;
+      fprintf(outputs[1], "data;\n");
+      fprintf(outputs[1], "set R := ");
+      fprintf(outputs[1], "%s\n", printTerminals());
+      fprintf(outputs[1], ";\n\n");
+      fprintf(outputs[1], "set S := ");
+      fprintf(outputs[1], "%s\n", printCurrent());
+      fprintf(outputs[1], ";\n\n");
+      fprintf(outputs[1], "set E : ");
+      for (i = 0; i < nodeCount; i++)
+        fprintf(outputs[1], "%d ", i+1);
+      fprintf(outputs[1], ":= \n");
+      for (i = 0; i < nodeCount; i++) {
+        fprintf(outputs[1], "      %d ", i+1);
+        for (j = 0; j < nodeCount; j++) {
+          if (i < j) {
+            fprintf(outputs[1], "- ");
+            continue;
+          }
+          w = adjacency[i][j];
+          if (w > 0)
+            fprintf(outputs[1], "+ ");
+          else
+            fprintf(outputs[1], "- ");
+        }
+        fprintf(outputs[1], "\n");
+      }
+      fprintf(outputs[1], ";\n\n");
+      fprintf(outputs[1], "param c default %d : ", INT_MAX);
+      for (i = 0; i < nodeCount; i++)
+        fprintf(outputs[1], "%d ", i+1);
+      fprintf(outputs[1], ":= \n");
+      for (i = 0; i < nodeCount; i++) {
+        fprintf(outputs[1], "      %d ", i+1);
+        for (j = 0; j < nodeCount; j++) {
+          if (i <= j) {
+            fprintf(outputs[1], ". ");
+            continue;
+          }
+          w = adjacency[i][j];
+          if (w > 0)
+            fprintf(outputs[1], "%d ", w);
+          else
+            fprintf(outputs[1], ". ");
+        }
+        fprintf(outputs[1], "\n");
+      }
+      fprintf(outputs[1], ";\n\n");
+      fprintf(outputs[1], "end;\n");
+    }
+
+  } // NONE
+
+  fclose(outputs[1]);
+  fclose(outputs[2]);
 
   while (it++ < maxIt && convergence - cIt) {
 
@@ -168,6 +221,8 @@ int main (int argc, const char* argv[]) {
   free(optimalSolution);
   free(currentSolution);
   free(tabuMoves);
+
+  fclose(outputs[0]);
 
   // printf("~waddle away~\n");
 
@@ -202,7 +257,7 @@ void parse(int extra) {
   while (fscanf(fp, "%s", token) != EOF) {
 
     if (strcmp(token, "SECTION") == 0)
-      section();
+      section(extra);
 
     else if (strcmp(token, "EOF") == 0) {
       #ifdef DEBUG_2
@@ -216,7 +271,7 @@ void parse(int extra) {
 
 }
 
-void section() {
+void section(int extra) {
 
   char token[10];
 
@@ -226,10 +281,10 @@ void section() {
     comments();
 
   else if (strcmp(token, "Graph") == 0)
-    graph();
+    graph(extra);
 
   else if (strcmp(token, "Terminals") == 0)
-    terminals();
+    terminals(extra);
 
 }
 
@@ -248,7 +303,7 @@ void comments() {
   }
 }
 
-void graph() {
+void graph(int extra) {
 
   char token[9];
 
@@ -256,9 +311,9 @@ void graph() {
   printf("\nReading graph structure\n");
   #endif
 
-  nodes();
+  nodes(extra);
 
-  edges();
+  edges(extra);
 
   fscanf(fp, "%s", token);
 
@@ -270,7 +325,7 @@ void graph() {
 
 }
 
-void terminals() {
+void terminals(int extra) {
 
   char token[10];
   int i, r;
@@ -313,7 +368,7 @@ void terminals() {
 
 }
 
-void nodes() {
+void nodes(int extra) {
 
   char token[6];
   int i;
@@ -338,7 +393,7 @@ void nodes() {
 
 }
 
-void edges() {
+void edges(int extra) {
 
   char token[6];
   int i, from, to, weight, aux;
@@ -392,7 +447,7 @@ void initialState() {
 
   #ifdef DEBUG_2
   printf("Initial solution is\n");
-  printCurrent();
+  printf("[%s]\n", printCurrent());
   #endif
 
   optimalSize = solutionSize;
@@ -533,7 +588,7 @@ int bestMove() {
 
   #ifdef DEBUG_1
   printf("New solution with %d Steiner nodes is ", solutionSize);
-  printCurrent();
+  printf("[%s]\n",printCurrent());
   #endif
 
   return theBest;
@@ -599,20 +654,48 @@ int inCurrentSolution(int n) {
 
 }
 
-void printCurrent() {
+const char* printCurrent() {
   int i;
+  char *nodes = (char *) malloc((solutionSize * 2 + 2) * sizeof(char *));
+
   if (solutionSize == 0)
-    printf("[ ]\n");
+    snprintf(nodes, 1, " ");
   else {
-
-    printf("[");
-
+    char x[6];
     for (i = 0; i < solutionSize - 1; i++) {
-      printf("%d ", currentSolution[i]);
+      snprintf(x, 5, "%d", currentSolution[i]);
+      strcat(nodes, x);
+      snprintf(x, 2, " ");
+      strcat(nodes, x);
     }
-    printf("%d]\n", currentSolution[solutionSize - 1]);
+    snprintf(x, 5, "%d", currentSolution[i]);
+    strcat(nodes, x);
   }
+
+  return nodes;
 }
+
+const char* printTerminals() {
+  int i;
+  char *nodes = (char *) malloc((terminalCount * 2 + 2) * sizeof(char *));
+
+  if (terminalCount == 0)
+    snprintf(nodes, 1, " ");
+  else {
+    char x[6];
+    for (i = 0; i < terminalCount - 1; i++) {
+      snprintf(x, 5, "%d", terminalNodes[i]);
+      strcat(nodes, x);
+      snprintf(x, 2, " ");
+      strcat(nodes, x);
+    }
+    snprintf(x, 5, "%d", terminalNodes[i]);
+    strcat(nodes, x);
+  }
+
+  return nodes;
+}
+
 
 void printOptimal() {
   int i;
@@ -630,7 +713,6 @@ void printOptimal() {
 }
 
 int neighborCost(int node, int op) {
-  // printf("Node %d\n", node);
 
   int v = terminalCount + solutionSize - op;
   int e = 0;

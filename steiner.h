@@ -37,12 +37,12 @@ int initialCost;
 void printUsage(const char exec[]);
 int openFile(const char path[]);
 void parse(int extra);
-void section();
+void section(int extra);
 void comments();
-void graph();
-void terminals();
-void nodes();
-void edges();
+void graph(int extra);
+void terminals(int extra);
+void nodes(int extra);
+void edges(int extra);
 
 void initialState();
 int localSearch();
@@ -52,7 +52,8 @@ int searchTabu(int s);
 int inTerminals(int s);
 int inCurrentSolution(int n);
 
-void printCurrent();
+const char *printCurrent();
+const char* printTerminals();
 void printOptimal();
 
 int neighborCost(int node, int op);
