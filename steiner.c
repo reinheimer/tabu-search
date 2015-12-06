@@ -12,44 +12,136 @@
 // #define DEBUG_1
 // #define DEBUG_2
 
+#define GLPKSETS 1
+#define GRAPHVIZ 2
+
 int main (int argc, const char* argv[]) {
+
+  int it = 0, cIt = 0;
+  int convergence = 50;
+  int maxIt = 1000;
+  char inputPath[255];
+  tenure = 0;
+  int extra = 0;
+
+  int argIndex;
+  char *argType, argValue[255];
 
   // How to accept tags like -i, -t, etc in command line?
 
-  int it, cIt = 0;
-  int convergence = 80;
+  // arg[0] is ./steiner
+  // arg[1] is output file path
+
+  for (argIndex = 1; argIndex < argc; argIndex++) {
+
+    if ((argType = strchr(argv[argIndex], '-') + 1) != NULL) {
+      printf("argType = %s\n", argType);
+
+      strcpy(argValue, argv[argIndex + 1]);
+
+      switch ((int)argType[0]) {
+
+        case 99: // -c sufficient iterations for "convergence"
+          convergence = atoi(argValue);
+          argIndex++;
+          break;
+
+        case 102: // -f input file
+          strcpy(inputPath, argValue);
+          printf("input = %s\n", inputPath);
+          argIndex++;
+          break;
+
+        case 103: // -g graphviz structure
+          extra += GRAPHVIZ;
+          break;
+
+        case 104: // -h
+          printUsage(argv[0]);
+          exit(EXIT_SUCCESS);
+          break;
+
+        case 109: // -m max iterations
+          maxIt = atoi(argValue);
+          argIndex++;
+          break;
+
+        case 115: // -s data for solver model
+          extra += GLPKSETS;
+          break;
+
+        case 116: // -t tabu tenure
+          tenure = atoi(argValue);
+          argIndex++;
+          break;
+      }
+    }
+  }
 
   if (argc < 2) {
     printUsage(argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  // We have to read from stdin too
-  if (openFile(argv[1]) < 0) {
-    printf("Error opening file: %s\n", argv[1]);
-    exit(EXIT_FAILURE);
+  if (strlen(inputPath) > 0) {
+    if (openFile(inputPath) < 0) {
+      printf("Error opening file: %s\n", argv[1]);
+      exit(EXIT_FAILURE);
+    }
+
+    if (extra > 1) { // GRAPHVIZ
+      char *last = strrchr(inputPath, '.');
+      if (last == NULL) {
+        char vizPath[strlen(inputPath) + 5];
+        strcpy(vizPath, inputPath);
+        strncat(vizPath, ".dot", 4);
+        outputs[2] = fopen(vizPath, "w");
+      } else {
+        strncpy(last, ".dot", 4);
+        outputs[2] = fopen(inputPath, "w");
+      }
+
+    } else if (extra > 0) { // GLPK SETS
+      char *last = strrchr(inputPath, '.');
+      if (last == NULL) {
+        char matPath[strlen(inputPath) + 5];
+        strcpy(matPath, inputPath);
+        strncat(matPath, ".dat", 4);
+        outputs[1] = fopen(matPath, "w");
+      } else {
+        strncpy(last, ".dat", 4);
+        outputs[1] = fopen(inputPath, "w");
+      }
+
+    } // NONE
+
+  } else {
+    fp = stdin; // We have to read from stdin too
   }
 
-  parse();
+  parse(extra);
 
-  if (argc < 3) {
+  // Parameters
+
+  if (tenure <= 0) {
     // how to decide about this guy?
     tenure = nodeCount * 0.1;
     if (tenure < 5) tenure = nodeCount - terminalCount - 1;
   }
-  else tenure = atoi(argv[2]);
+  // else tenure = atoi(argv[2]);
 
-  if (argc < 4) it = 1000;
-  else it = atoi(argv[3]);
+  // if (maxIt <= 0) maxIt = 1000;
+
+  // if (argc > 4) convergence = atoi(argv[4]);
 
   fclose(fp);
 
   initialState();
 
-  while (it-- && convergence - cIt) {
+  while (it++ < maxIt && convergence - cIt) {
 
     #ifdef DEBUG_1
-    printf("\n\nIteration #%d\n", 1000 - it);
+    printf("\n\nIteration #%d\n", it);
     #endif
 
     if (localSearch())
@@ -61,13 +153,13 @@ int main (int argc, const char* argv[]) {
 
   }
 
-  printf("\nThis is the end!\n");
-  printf("----------------\n");
-  printf("Met criterion: %s\n", cIt == convergence? "iterations without improvement": "max iterations");
+  printf("-----------------\n");
+  printf("Met criterion: ");
+  cIt == convergence? printf("%d iterations without improvement (at # %d)\n", convergence, it): printf("max iterations\n");
   printf("The optimal solution is ");
   printOptimal();
   printf("Steiner nodes: %d\tCost: %d\n", optimalSize, optimalCost);
-  printf("Deviation from initial solution: %.3f%%\n\n", 100 * (initialCost - optimalCost)/(float)initialCost);
+  printf("Deviation from initial solution: %.3f%%\n", 100 * (initialCost - optimalCost)/(float)initialCost);
   //printf("\tOptimal solution -> %.3f\n\n", 100 * (82.0 - optimalCost)/82.0);
 
 
@@ -90,7 +182,9 @@ void printUsage(const char exec[]) {
 
 int openFile(const char path[]) {
 
-  printf("\nOpening file %s\n\n", path);
+  #ifdef DEBUG_2
+  printf("Opening file %s\n\n", path);
+  #endif
   fp = fopen(path, "r");
 
   if (fp == NULL)
@@ -101,7 +195,7 @@ int openFile(const char path[]) {
 
 }
 
-void parse() {
+void parse(int extra) {
 
   char token[10];
 
@@ -110,8 +204,11 @@ void parse() {
     if (strcmp(token, "SECTION") == 0)
       section();
 
-    else if (strcmp(token, "EOF") == 0)
+    else if (strcmp(token, "EOF") == 0) {
+      #ifdef DEBUG_2
       printf("Parsing successful.\n\n");
+      #endif
+    }
 
     else printf("%s ", token);
 
@@ -140,7 +237,9 @@ void comments() {
 
   char token[9], buff[255];
 
+  #ifdef DEBUG_2
   printf("\n\nReading comment section\n");
+  #endif
 
   while (fscanf(fp, "%s", token) && strcmp(token, "END")) {
     printf("%s ", token);
@@ -153,7 +252,9 @@ void graph() {
 
   char token[9];
 
+  #ifdef DEBUG_2
   printf("\nReading graph structure\n");
+  #endif
 
   nodes();
 
@@ -161,9 +262,11 @@ void graph() {
 
   fscanf(fp, "%s", token);
 
-  if (strcmp(token, "END") == 0)
-    printf("First level engines working\n");
-  else exit(EXIT_FAILURE);
+  if (strcmp(token, "END") == 0) {
+    #ifdef DEBUG_2
+    printf("Graph structure succesfully read\n");
+    #endif
+  } else exit(EXIT_FAILURE);
 
 }
 
@@ -172,7 +275,9 @@ void terminals() {
   char token[10];
   int i, r;
 
+  #ifdef DEBUG_2
   printf("\nDefining terminal nodes\n");
+  #endif
 
   fscanf(fp, "%s", token);
 
@@ -196,11 +301,13 @@ void terminals() {
   fscanf(fp, "%s", token);
 
   if (strcmp(token, "END") == 0) {
+    #ifdef DEBUG_2
     printf("Terminal nodes read\n[");
     for (i = 0; i < terminalCount - 1; i++) {
       printf("%d ", terminalNodes[i]);
     }
     printf("%d]\n\n", terminalNodes[terminalCount - 1]);
+    #endif
   }
   else exit(EXIT_FAILURE);
 
@@ -218,7 +325,9 @@ void nodes() {
 
   fscanf(fp, "%d", &nodeCount);
 
+  #ifdef DEBUG_2
   printf("%d nodes\n", nodeCount);
+  #endif
 
   adjacency = (int **) calloc(nodeCount, sizeof(int*));
   if (adjacency == NULL) exit (EXIT_FAILURE);
@@ -241,7 +350,9 @@ void edges() {
 
   fscanf(fp, "%d", &edgeCount);
 
+  #ifdef DEBUG_2
   printf("%d edges\n", edgeCount);
+  #endif
 
   for (i = 0; i < edgeCount; i++) {
 
@@ -279,8 +390,10 @@ void initialState() {
       currentSolution[solutionSize++] = i;
   }
 
+  #ifdef DEBUG_2
   printf("Initial solution is\n");
   printCurrent();
+  #endif
 
   optimalSize = solutionSize;
 
@@ -374,7 +487,10 @@ int bestMove() {
     int result = neighborCost(i, op);
 
     #ifdef DEBUG_1
-    printf("New cost: %d\n", result);
+    printf("New cost is ");
+    if (result == INT_MAX)
+      printf("indetermined (not a tree)\n");
+    else printf("%d\n", result);
     #endif
 
     if (result < theBest) {

@@ -55,11 +55,13 @@ int main(int argc, char** argv) {
    }
 
    printf("mkdir Experiments\n");
-   for (n = 1; n <= tenure; n++) {
-     for (i = 1000; i <= maxIt; i+= 1000) {
-       for (c = 10; c <= cIt; c += 10) {
-         for (f = 0; f < countFiles; f++) {
-           printf("(time %s %s/%s %d %d %d) &> Experiments/%s_t%di%dc%d.out\n", executable, dir, files[f], n, i, c, files[f], n, i, c);
+
+   for (f = 0; f < countFiles; f++) {
+     printf("mkdir %s\n", files[f]);
+     for (n = 1; n <= tenure; n++) {
+       for (i = 1000; i <= maxIt; i+= 1000) {
+         for (c = 10; c <= cIt; c += 10) {
+           printf("(time %s -f %s/%s -t %d -m %d -c %d) &> Experiments/%s/%s_t%di%dc%d.out\n", executable, dir, files[f], n, i, c, files[f], files[f], n, i, c);
          }
        }
      }

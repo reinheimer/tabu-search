@@ -16,6 +16,7 @@
 #include <limits.h>
 
 FILE *fp;
+FILE *outputs[3];
 
 int **adjacency;
 int nodeCount;
@@ -35,7 +36,7 @@ int initialCost;
 
 void printUsage(const char exec[]);
 int openFile(const char path[]);
-void parse();
+void parse(int extra);
 void section();
 void comments();
 void graph();
