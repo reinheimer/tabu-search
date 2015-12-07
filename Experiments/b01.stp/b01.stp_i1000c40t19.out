@@ -1,5 +1,13 @@
-Pass/b01/.creator.sh: line 1613: 23674 Segmentation fault: 11  ./steiner -f Pass/b01/b01.stp -t 19 -m 1000 -c 40
+33D32945 STP File, STP Format Version 1.0 Name     "B01"
+Creator  "J. E. Beasley"
+Remark   "Sparse graph with random weights"
+Initial cost: 275
+-----------------
+Met criterion: 40 iterations without improvement (at # 111)
+The optimal solution is [7 20 21 29 33 36 47 41 44 30 15]
+Steiner nodes: 11	Cost: 86
+Deviation from initial solution: 68.727%
 
-real	0m0.251s
-user	0m0.060s
-sys	0m0.002s
+real	0m0.199s
+user	0m0.189s
+sys	0m0.004s

@@ -1,11 +1,13 @@
-steiner(23640,0x7fff7d7ce300) malloc: *** error for object 0x7ff39841fcc0: incorrect checksum for freed object - object was probably modified after being freed.
-*** set a breakpoint in malloc_error_break to debug
 33D32945 STP File, STP Format Version 1.0 Name     "B01"
 Creator  "J. E. Beasley"
 Remark   "Sparse graph with random weights"
 Initial cost: 275
-Pass/b01/.creator.sh: line 1596: 23640 Abort trap: 6           ./steiner -f Pass/b01/b01.stp -t 2 -m 1000 -c 40
+-----------------
+Met criterion: 40 iterations without improvement (at # 72)
+The optimal solution is [2 7 18 20 21 28 29 33 36 45 47 19]
+Steiner nodes: 12	Cost: 90
+Deviation from initial solution: 67.273%
 
-real	0m0.219s
-user	0m0.021s
-sys	0m0.001s
+real	0m0.191s
+user	0m0.175s
+sys	0m0.005s
