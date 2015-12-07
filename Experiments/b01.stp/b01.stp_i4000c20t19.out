@@ -1,0 +1,11 @@
+steiner(24459,0x7fff7d7ce300) malloc: *** error for object 0x7fd451702050: incorrect checksum for freed object - object was probably modified after being freed.
+*** set a breakpoint in malloc_error_break to debug
+33D32945 STP File, STP Format Version 1.0 Name     "B01"
+Creator  "J. E. Beasley"
+Remark   "Sparse graph with random weights"
+Initial cost: 275
+Pass/b01/.creator.sh: line 2003: 24459 Abort trap: 6           ./steiner -f Pass/b01/b01.stp -t 19 -m 4000 -c 20
+
+real	0m0.205s
+user	0m0.012s
+sys	0m0.001s

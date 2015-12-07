@@ -1,0 +1,5 @@
+Pass/b14/.creator.sh: line 125: 25344 Segmentation fault: 11  ./steiner -f Pass/b14/b14.stp -t 3 -m 1000 -c 50
+
+real	0m3.462s
+user	0m3.257s
+sys	0m0.011s

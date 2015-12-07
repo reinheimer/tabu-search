@@ -1,0 +1,5 @@
+Pass/b14/.creator.sh: line 404: 26033 Segmentation fault: 11  ./steiner -f Pass/b14/b14.stp -t 12 -m 3000 -c 40
+
+real	0m2.270s
+user	0m2.084s
+sys	0m0.005s

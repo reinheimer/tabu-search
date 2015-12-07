@@ -1,0 +1,13 @@
+33D32945 STP File, STP Format Version 1.0 Name     "B14"
+Creator  "J. E. Beasley"
+Remark   "Sparse graph with random weights"
+Initial cost: 473
+-----------------
+Met criterion: 50 iterations without improvement (at # 167)
+The optimal solution is [2 4 44 47 48 53 54 57 58 59 62 66 74 75 81 89 73]
+Steiner nodes: 17	Cost: 237
+Deviation from initial solution: 49.894%
+
+real	0m4.293s
+user	0m4.283s
+sys	0m0.007s

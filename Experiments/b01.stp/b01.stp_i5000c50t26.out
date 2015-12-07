@@ -1,0 +1,5 @@
+Pass/b01/.creator.sh: line 2250: 24960 Segmentation fault: 11  ./steiner -f Pass/b01/b01.stp -t 26 -m 5000 -c 50
+
+real	0m0.270s
+user	0m0.063s
+sys	0m0.003s
