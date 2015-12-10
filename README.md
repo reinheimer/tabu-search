@@ -10,3 +10,5 @@ Tabu is a powerful technique, once it's stores a few moves around the solutions'
 -m Maximum iterations
 
 -c Convergence (iterations without improvement considered sufficient)
+
+-s Create data file for GLPK
